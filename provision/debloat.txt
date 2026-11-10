@@ -1,0 +1,43 @@
+# CapITV debloat list, reviewed by hand.
+#
+# Format: <package> <tier>  # why
+#   core      disabled by default
+#   optional  disabled only with --aggressive (read the note first)
+#
+# Every entry is disabled with `pm disable-user --user 0`, which is reversible
+# (`capitv-provision.sh --restore`, or `adb shell pm enable <pkg>`). Nothing is
+# ever uninstalled. Packages that are not on the box are skipped, so one list
+# covers the Google TV Streamer, Chromecast with Google TV, Nvidia Shield and
+# generic Android TV 12+ boxes.
+#
+# NEVER add these (the box breaks or the four apps stop working):
+#   com.google.android.gms              Play services: DRM, sign-in, casting
+#   com.android.vending                 Play Store: needed to install/update the 4 apps
+#   com.google.android.apps.mediashell  Cast receiver
+#   com.google.android.tungsten.setupwraith / com.google.android.apps.tv.launcherx
+#                                       Only touched by --hard-home, in a safe order
+#   com.android.tv.settings             Settings
+#   com.google.android.tv.remote.service Remote pairing / phone remote
+
+# --- Recommendations and promoted content ---------------------------------
+com.google.android.tvrecommendations core       # legacy "recommended" rows feeding the stock home (Android TV)
+com.google.android.leanbacklauncher.recommendations core  # same, older Android TV builds
+
+# --- Preinstalled apps Emile never uses -----------------------------------
+com.google.android.play.games core               # Google Play Games
+com.google.android.youtube.tvmusic core          # YouTube Music
+com.google.android.youtube.tvkids core           # YouTube Kids
+com.nvidia.tegrazone3 core                       # Shield: NVIDIA Games / GeForce NOW hub
+com.android.printspooler core                    # printing service, useless on a TV
+
+# --- Telemetry and feedback ------------------------------------------------
+com.google.android.feedback core                 # "Send feedback" / crash report uploader
+com.google.android.tv.bugreportsender core       # bug report uploader (if present)
+com.nvidia.shield.ask core                       # Shield: feedback / "Ask NVIDIA" (if present)
+
+# --- Optional: more aggressive, has side effects -------------------------
+com.google.android.apps.tv.dreamx optional       # Ambient mode screensaver with promoted content. Screen goes black instead.
+com.google.android.backdrop optional             # Older Android TV ambient screensaver
+com.google.android.videos optional               # "Google TV" shop/watchlist backend. Can make the stock home glitchy; CapITV does not need it.
+com.google.android.katniss optional              # Google Assistant / voice search. The mic button stops working.
+com.nvidia.ota optional                          # Shield: system updates. Stops OTA updates (security fixes too).

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "youtubeClient": "smarttube",
+  "smarttubePackages": [
+    "org.smarttube.stable",
+    "org.smarttube.beta",
+    "com.liskovsoft.smarttubetv.beta",
+    "com.teamsmart.videomanager.tv"
+  ],
+  "tiles": [
+    {
+      "id": "netflix",
+      "label": "Netflix",
+      "accent": "#E50914",
+      "packages": ["com.netflix.ninja"],
+      "keys": ["1", "NUMPAD_1", "PROG_RED", "BUTTON_4"]
+    },
+    {
+      "id": "youtube",
+      "label": "YouTube",
+      "accent": "#FF0033",
+      "packages": ["com.google.android.youtube.tv"],
+      "keys": ["2", "NUMPAD_2", "PROG_GREEN", "BUTTON_3"]
+    },
+    {
+      "id": "prime",
+      "label": "Prime Video",
+      "accent": "#1A98FF",
+      "packages": ["com.amazon.amazonvideo.livingroom"],
+      "keys": ["3", "NUMPAD_3", "PROG_YELLOW", "MACRO_1"]
+    },
+    {
+      "id": "canal",
+      "label": "Canal+",
+      "accent": "#F2F2F2",
+      "packages": ["com.canal.android.canal"],
+      "keys": ["4", "NUMPAD_4", "PROG_BLUE", "MACRO_2"]
+    }
+  ],
+  "settingsKeys": ["0", "NUMPAD_0", "SETTINGS"]
+}

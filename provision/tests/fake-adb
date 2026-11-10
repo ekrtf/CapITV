@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Minimal adb stand-in for provisioning tests. State lives in $FAKE_ADB_DIR:
+#   packages.txt  installed packages     disabled.txt  disabled packages
+#   settings.txt  "<ns> <key>=<value>"   log.txt       every call
+set -euo pipefail
+d="${FAKE_ADB_DIR:?}"
+touch "$d/packages.txt" "$d/disabled.txt" "$d/settings.txt"
+printf '%s\n' "$*" >> "$d/log.txt"
+
+if [ "${1:-}" = "connect" ]; then echo "connected to $2"; exit 0; fi
+if [ "${1:-}" = "devices" ]; then printf "List of devices attached\nemulator-5554\tdevice\n"; exit 0; fi
+if [ "${1:-}" = "-s" ]; then shift 2; fi
+cmd="${1:-}"; shift || true
+
+setting_get() { local v; v="$(grep "^$1 $2=" "$d/settings.txt" | head -n 1 | sed "s/^$1 $2=//")" || true; echo "${v:-null}"; }
+setting_del() { grep -v "^$1 $2=" "$d/settings.txt" > "$d/s.tmp" || true; mv "$d/s.tmp" "$d/settings.txt"; }
+
+case "$cmd" in
+  get-state) echo device ;;
+  install)
+    [ "${1:-}" = "-r" ] && shift
+    [ -f "$1" ] || { echo "Failure [no file]"; exit 1; }
+    grep -qx com.ekrtf.capitv "$d/packages.txt" || echo com.ekrtf.capitv >> "$d/packages.txt"
+    echo Success ;;
+  uninstall) grep -vx "$1" "$d/packages.txt" > "$d/p.tmp" || true; mv "$d/p.tmp" "$d/packages.txt"; echo Success ;;
+  shell)
+    case "$1 ${2:-}" in
+      "getprop ro.product.model") echo "Google TV Streamer" ;;
+      "getprop ro.build.version.sdk") echo 34 ;;
+      "getprop ro.product.cpu.abi") echo arm64-v8a ;;
+      "pm list")
+        if [ "${4:-}" = "-d" ]; then sed 's/^/package:/' "$d/disabled.txt"
+        else sed 's/^/package:/' "$d/packages.txt"; fi ;;
+      "pm disable-user")
+        grep -qx "$5" "$d/disabled.txt" || echo "$5" >> "$d/disabled.txt"
+        echo "Package $5 new state: disabled-user" ;;
+      "pm enable")
+        grep -vx "$3" "$d/disabled.txt" > "$d/x.tmp" || true; mv "$d/x.tmp" "$d/disabled.txt"
+        echo "Package $3 new state: enabled" ;;
+      "settings get") setting_get "$3" "$4" ;;
+      "settings put") setting_del "$3" "$4"; echo "$3 $4=$5" >> "$d/settings.txt" ;;
+      "settings delete") setting_del "$3" "$4" ;;
+      "cmd package")
+        case "$3" in
+          resolve-activity) printf 'priority=2 preferredOrder=0\ncom.google.android.apps.tv.launcherx/.home.HomeActivity\n' ;;
+          set-home-activity) echo "Error: home activity not changed" ;;
+        esac ;;
+      "am start") echo "Starting: Intent" ;;
+      "dumpsys package") echo "requested permissions:" ;;
+      *) echo "fake-adb: unhandled shell $*" >&2; exit 1 ;;
+    esac ;;
+  *) echo "fake-adb: unhandled $cmd $*" >&2; exit 1 ;;
+esac

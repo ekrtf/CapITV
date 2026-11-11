@@ -1,5 +1,6 @@
 package com.ekrtf.capitv
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -7,12 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,8 +28,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
@@ -39,7 +43,6 @@ import androidx.tv.material3.darkColorScheme
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 
 private val Background = Color(0xFF0B0C10)
@@ -82,11 +85,14 @@ fun HomeScreen(
                 config.tiles.forEachIndexed { index, tile ->
                     // Re-evaluated on every resume (resumeTick) so newly installed apps light up.
                     val installed = remember(resumeTick, tile.id) { resolver.resolve(tile) != null }
+                    // Tiles share the row: a TV screen is only 960dp wide, so four full-size
+                    // tiles plus gaps (1076dp) would push the last one off screen.
+                    val share = Modifier.weight(1f, fill = false)
                     AppTile(
                         tile = tile,
                         number = index + 1,
                         installed = installed,
-                        modifier = if (index == 0) Modifier.focusRequester(firstTile) else Modifier,
+                        modifier = if (index == 0) share.focusRequester(firstTile) else share,
                         onClick = { onLaunch(tile) },
                     )
                 }
@@ -137,7 +143,7 @@ private fun AppTile(
     val shape = RoundedCornerShape(20.dp)
     Surface(
         onClick = onClick,
-        modifier = modifier.size(width = 248.dp, height = 156.dp),
+        modifier = modifier.widthIn(max = 248.dp).aspectRatio(248f / 156f),
         shape = ClickableSurfaceDefaults.shape(shape = shape),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = TileIdle,
@@ -173,8 +179,10 @@ private fun AppTile(
                 Text(
                     text = tile.label,
                     color = if (installed) Color.White else TextDim,
-                    fontSize = 28.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (!installed) {
                     Text(
@@ -215,6 +223,8 @@ private fun SettingsChip(onClick: () -> Unit) {
 @Composable
 private fun Clock(modifier: Modifier = Modifier) {
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    // The box's own 12/24-hour setting, not just the locale's default.
+    val is24Hour = DateFormat.is24HourFormat(LocalContext.current)
     var now by remember { mutableStateOf(LocalDateTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -223,8 +233,9 @@ private fun Clock(modifier: Modifier = Modifier) {
             delay((60 - now.second) * 1_000L - now.nano / 1_000_000 + 50)
         }
     }
-    val time = remember(now, locale) {
-        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(now)
+    val time = remember(now, locale, is24Hour) {
+        val skeleton = if (is24Hour) "Hm" else "hm"
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(now)
     }
     val date = remember(now.toLocalDate(), locale) {
         DateTimeFormatter.ofPattern("EEEE d MMMM", locale).format(now)

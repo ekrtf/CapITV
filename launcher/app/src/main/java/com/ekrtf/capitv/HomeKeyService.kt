@@ -9,7 +9,8 @@ import android.view.accessibility.AccessibilityEvent
  * Google TV has no default-launcher setting, so the stock launcher keeps the HOME role.
  * This service intercepts only KEYCODE_HOME and brings CapITV to the front instead.
  *
- * - It never reads window content (canRetrieveWindowContent=false).
+ * - It never reads window content (canRetrieveWindowContent=false) and subscribes to no
+ *   accessibility events, so it does not even learn which app is in front.
  * - Every other key passes through untouched, so the remote's Netflix / YouTube /
  *   custom buttons keep working through the system.
  * - It opens CapITV with a private action rather than ACTION_MAIN/CATEGORY_HOME, so the

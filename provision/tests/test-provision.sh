@@ -38,6 +38,8 @@ run() { bash "$SCRIPT" --apk "$WORK/fake.apk" "$@" 192.168.1.50 > "$WORK/out.txt
 # 1. dry run changes nothing
 run --dry-run --dns abc.dns.nextdns.io
 grep -q '\[dry-run\]' "$WORK/out.txt" || fail "dry-run printed no commands"
+grep -qF '[dry-run] adb -s 192.168.1.50:5555 shell pm disable-user --user 0 com.google.android.play.games' "$WORK/out.txt" \
+  || fail "dry-run hid the debloat commands"
 [ ! -s "$WORK/adb/disabled.txt" ] || fail "dry-run disabled packages"
 has packages.txt com.ekrtf.capitv && fail "dry-run installed the APK"
 [ ! -d "$WORK/state" ] || fail "dry-run wrote state"
@@ -91,5 +93,14 @@ if bash "$SCRIPT" --dns 'bad host;rm' 1.2.3.4 >/dev/null 2>&1; then fail "bad --
 if bash "$SCRIPT" --uninstall 1.2.3.4 >/dev/null 2>&1; then fail "--uninstall without --restore accepted"; fi
 bash "$SCRIPT" --help | grep -q "Usage:" || fail "--help"
 pass "argument validation"
+
+# 7. the NEVER list in debloat.txt is enforced even if someone adds those packages
+printf '%s\n' com.android.tv.settings com.google.android.tv.remote.service >> "$WORK/adb/packages.txt"
+printf '%s\n' "com.android.tv.settings core" "com.google.android.tv.remote.service core" > "$WORK/debloat.txt"
+CAPITV_DEBLOAT_FILE="$WORK/debloat.txt" run
+has disabled.txt com.android.tv.settings && fail "Settings disabled"
+has disabled.txt com.google.android.tv.remote.service && fail "remote service disabled"
+grep -q "refusing to disable protected package com.google.android.tv.remote.service" "$WORK/out.txt" || fail "no refusal message"
+pass "protected packages are never disabled"
 
 echo "All $PASS provisioning tests passed."

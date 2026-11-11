@@ -90,12 +90,16 @@ adbq() { adb -s "$SERIAL" "$@"; }
 # Shell output without carriage returns (older adb adds \r).
 sh_q() { adbq shell "$@" 2>/dev/null | tr -d '\r'; }
 # Mutating adb call: printed in --dry-run, executed otherwise.
+# The dry-run line goes to fd 3 (the real stdout, see main) so it still shows when
+# the caller sends adb's own output to /dev/null.
 adbw() {
   CHANGES=$((CHANGES + 1))
   if [ "$DRY_RUN" -eq 1 ]; then
-    printf '    [dry-run] adb -s %s' "$SERIAL"
-    printf ' %q' "$@"
-    printf '\n'
+    {
+      printf '    [dry-run] adb -s %s' "$SERIAL"
+      printf ' %q' "$@"
+      printf '\n'
+    } >&3
     return 0
   fi
   adb -s "$SERIAL" "$@"
@@ -357,8 +361,11 @@ debloat() {
     set -- ${line%%#*}
     pkg="${1:-}"; tier="${2:-core}"
     [ -n "$pkg" ] || continue
+    # Same list as the NEVER block at the top of debloat.txt.
     case "$pkg" in
-      com.google.android.gms|com.android.vending|com.google.android.apps.mediashell|"$PKG"|"$GTV_LAUNCHER"|"$GTV_SETUPWRAITH")
+      com.google.android.gms|com.android.vending|com.google.android.apps.mediashell|\
+      com.android.tv.settings|com.google.android.tv.remote.service|\
+      "$PKG"|"$GTV_LAUNCHER"|"$GTV_SETUPWRAITH")
         warn "refusing to disable protected package $pkg (edit debloat.txt)"; continue ;;
     esac
     if [ "$tier" = "optional" ] && [ "$AGGRESSIVE" -eq 0 ]; then continue; fi
@@ -447,7 +454,7 @@ $GTV_SETUPWRAITH"
     if [ -n "$cleaned" ]; then
       adbw shell settings put secure enabled_accessibility_services "$cleaned"
     else
-      adbw shell settings delete secure enabled_accessibility_services
+      adbw shell settings delete secure enabled_accessibility_services >/dev/null
       [ "$(state_get a11y_enabled)" = "1" ] || adbw shell settings put secure accessibility_enabled 0
     fi
     ok "Home button service off"
@@ -462,14 +469,14 @@ $GTV_SETUPWRAITH"
   local mode spec
   mode="$(state_get dns_mode)"; spec="$(state_get dns_specifier)"
   if [ -n "$mode" ]; then
-    if [ "$mode" = "null" ]; then adbw shell settings delete global private_dns_mode; else adbw shell settings put global private_dns_mode "$mode"; fi
-    if [ "$spec" = "null" ] || [ -z "$spec" ]; then adbw shell settings delete global private_dns_specifier; else adbw shell settings put global private_dns_specifier "$spec"; fi
+    if [ "$mode" = "null" ]; then adbw shell settings delete global private_dns_mode >/dev/null; else adbw shell settings put global private_dns_mode "$mode"; fi
+    if [ "$spec" = "null" ] || [ -z "$spec" ]; then adbw shell settings delete global private_dns_specifier >/dev/null; else adbw shell settings put global private_dns_specifier "$spec"; fi
     ok "Private DNS restored ($mode)"
   fi
   local ota
   ota="$(state_get ota_disable)"
   if [ -n "$ota" ]; then
-    if [ "$ota" = "null" ]; then adbw shell settings delete global ota_disable_automatic_update; else adbw shell settings put global ota_disable_automatic_update "$ota"; fi
+    if [ "$ota" = "null" ]; then adbw shell settings delete global ota_disable_automatic_update >/dev/null; else adbw shell settings put global ota_disable_automatic_update "$ota"; fi
     ok "system update setting restored"
   fi
 
@@ -497,6 +504,7 @@ summary() {
 }
 
 main() {
+  exec 3>&1
   parse_args "$@"
   connect
   refresh_packages

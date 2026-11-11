@@ -7,7 +7,10 @@ exactly four things: **Netflix, YouTube, Prime Video, Canal+**. No feeds, no
 recommendations, no ads on the home screen, nothing that phones home, and the same
 layout and remote in the living room (LG, webOS) and the bedroom (Samsung, Tizen).
 
-<p align="center"><code>[ 1 Netflix ]  [ 2 YouTube ]  [ 3 Prime Video ]  [ 4 Canal+ ]</code></p>
+<p align="center">
+  <img src="docs/screenshots/home.png" width="860"
+       alt="CapITV home screen: four numbered tiles (Netflix, YouTube, Prime Video, Canal+) with Netflix focused, a clock top right, and a Settings button with the shortcut hint at the bottom">
+</p>
 
 ## Why not a Raspberry Pi?
 
@@ -25,6 +28,18 @@ a certified box, **locked down**: CapITV replaces its home screen and switches t
 | [`launcher/`](launcher) | The CapITV launcher, a native Android TV app (Kotlin, Compose for TV). 4 big tiles + clock + Settings. **No INTERNET permission**, no analytics, no network code. Config in [`capitv.json`](launcher/app/src/main/assets/capitv.json), bundled so both TVs are identical. |
 | [`provision/`](provision) | `capitv-provision.sh <box-ip>`: one idempotent adb script that installs the launcher, makes it the Home screen, disables bloat from a reviewed list, sets Private DNS, and can undo all of it with `--restore`. |
 | [`docs/`](docs) | [Hardware](docs/HARDWARE.md) · [Remote](docs/REMOTE.md) · [TV setup](docs/TV-SETUP.md) · [Supervision checklist](docs/SUPERVISION.md) · [Signing](docs/SIGNING.md) · [Original brief](docs/BRIEF.md) |
+
+## The home screen
+
+Tiles are numbered like the remote's keys, and the focused tile is ringed in its app's colour.
+An app that isn't installed (or is disabled) is greyed out; selecting it opens its Play Store page.
+
+<p align="center">
+  <img src="docs/screenshots/app-missing.png" width="860"
+       alt="CapITV home screen with Prime Video focused (blue ring) and the Canal+ tile greyed out, labelled Not installed">
+</p>
+
+<sub>Screenshots: Google TV 14 emulator at 1080p, release build.</sub>
 
 ## Architecture
 
@@ -70,9 +85,8 @@ what needs your hands vs what an agent can do: [docs/SUPERVISION.md](docs/SUPERV
 ## Build
 
 ```sh
-cd launcher
-./gradlew assembleRelease test lint        # JDK 17, Android SDK 36
-provision/tests/test-provision.sh           # script tests against a fake adb
+(cd launcher && ./gradlew assembleRelease test lint)   # JDK 17, Android SDK 36
+provision/tests/test-provision.sh                       # script tests against a fake adb
 ```
 
 CI (GitHub Actions) runs the same, plus shellcheck and an APK permission check, and

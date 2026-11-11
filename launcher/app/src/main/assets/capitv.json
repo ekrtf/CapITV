@@ -11,6 +11,7 @@
     {
       "id": "netflix",
       "label": "Netflix",
+      "logo": "logos/netflix.webp",
       "accent": "#E50914",
       "packages": ["com.netflix.ninja"],
       "keys": ["1", "NUMPAD_1", "PROG_RED", "BUTTON_4"]
@@ -18,6 +19,7 @@
     {
       "id": "youtube",
       "label": "YouTube",
+      "logo": "logos/youtube.webp",
       "accent": "#FF0033",
       "packages": ["com.google.android.youtube.tv"],
       "keys": ["2", "NUMPAD_2", "PROG_GREEN", "BUTTON_3"]
@@ -25,6 +27,7 @@
     {
       "id": "prime",
       "label": "Prime Video",
+      "logo": "logos/prime.webp",
       "accent": "#1A98FF",
       "packages": ["com.amazon.amazonvideo.livingroom"],
       "keys": ["3", "NUMPAD_3", "PROG_YELLOW", "MACRO_1"]
@@ -32,6 +35,7 @@
     {
       "id": "canal",
       "label": "Canal+",
+      "logo": "logos/canal.webp",
       "accent": "#F2F2F2",
       "packages": ["com.canal.android.canal"],
       "keys": ["4", "NUMPAD_4", "PROG_BLUE", "MACRO_2"]

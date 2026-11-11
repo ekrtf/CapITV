@@ -7,7 +7,10 @@ exactly four things: **Netflix, YouTube, Prime Video, Canal+**. No feeds, no
 recommendations, no ads on the home screen, nothing that phones home, and the same
 layout and remote in the living room (LG, webOS) and the bedroom (Samsung, Tizen).
 
-<p align="center"><code>[ 1 Netflix ]  [ 2 YouTube ]  [ 3 Prime Video ]  [ 4 Canal+ ]</code></p>
+<p align="center">
+  <img src="docs/screenshots/home.png" width="860"
+       alt="CapITV home screen: four dark tiles showing the Netflix, YouTube, Prime Video and Canal+ logos, numbered 1 to 4 underneath, with Netflix focused in a red glow, a clock top right and a Settings button bottom left">
+</p>
 
 ## Why not a Raspberry Pi?
 
@@ -22,9 +25,22 @@ a certified box, **locked down**: CapITV replaces its home screen and switches t
 
 | Path | What |
 |---|---|
-| [`launcher/`](launcher) | The CapITV launcher, a native Android TV app (Kotlin, Compose for TV). 4 big tiles + clock + Settings. **No INTERNET permission**, no analytics, no network code. Config in [`capitv.json`](launcher/app/src/main/assets/capitv.json), bundled so both TVs are identical. |
+| [`launcher/`](launcher) | The CapITV launcher, a native Android TV app (Kotlin, Compose for TV). 4 logo tiles + clock + Settings. **No INTERNET permission**, no analytics, no network code. Config in [`capitv.json`](launcher/app/src/main/assets/capitv.json), bundled so both TVs are identical. |
 | [`provision/`](provision) | `capitv-provision.sh <box-ip>`: one idempotent adb script that installs the launcher, makes it the Home screen, disables bloat from a reviewed list, sets Private DNS, and can undo all of it with `--restore`. |
 | [`docs/`](docs) | [Hardware](docs/HARDWARE.md) · [Remote](docs/REMOTE.md) · [TV setup](docs/TV-SETUP.md) · [Supervision checklist](docs/SUPERVISION.md) · [Signing](docs/SIGNING.md) · [Original brief](docs/BRIEF.md) |
+
+## The home screen
+
+One logo per tile, and under it the remote key that opens it. The focused tile glows in its
+app's colour. An app that isn't installed (or is disabled) is faded out; selecting it opens
+its Play Store page. Logos live in [`assets/logos/`](launcher/app/src/main/assets/logos) and are set per tile in `capitv.json`.
+
+<p align="center">
+  <img src="docs/screenshots/app-missing.png" width="860"
+       alt="CapITV home screen with Prime Video focused in a blue glow and the Canal+ logo faded, labelled 4 · Not installed">
+</p>
+
+<sub>Screenshots: Google TV 14 emulator at 1080p, release build.</sub>
 
 ## Architecture
 
@@ -70,9 +86,8 @@ what needs your hands vs what an agent can do: [docs/SUPERVISION.md](docs/SUPERV
 ## Build
 
 ```sh
-cd launcher
-./gradlew assembleRelease test lint        # JDK 17, Android SDK 36
-provision/tests/test-provision.sh           # script tests against a fake adb
+(cd launcher && ./gradlew assembleRelease test lint)   # JDK 17, Android SDK 36
+provision/tests/test-provision.sh                       # script tests against a fake adb
 ```
 
 CI (GitHub Actions) runs the same, plus shellcheck and an APK permission check, and

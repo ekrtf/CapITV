@@ -4,7 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.w3c.dom.Element
 import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 class AppConfigTest {
 
@@ -143,5 +145,32 @@ class AppConfigTest {
     fun everyBundledKeyNameResolves() {
         val names = bundled.tiles.flatMap { it.keys } + bundled.settingsKeys
         assertTrue(names.all { KeyNames.codeOf(it) != null })
+    }
+
+    @Test
+    fun everyBundledTileHasALogoThatExists() {
+        bundled.tiles.forEach { tile ->
+            val logo = tile.logo ?: error("Tile '${tile.id}' has no logo")
+            assertTrue("missing asset $logo", File("src/main/assets/$logo").isFile)
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun blankLogoIsRejected() {
+        AppConfig.parse(
+            config(extraTile = """, {"id": "x", "label": "X", "logo": " ", "accent": "#000000", "packages": ["x"]}"""),
+        )
+    }
+
+    @Test
+    fun everyBundledPackageIsInTheManifestQueries() {
+        // Android 11+ hides packages missing from <queries>: their tile would always say "Not installed".
+        val manifest = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+            .parse(File("src/main/AndroidManifest.xml"))
+        val queries = manifest.getElementsByTagName("queries").item(0) as Element
+        val nodes = queries.getElementsByTagName("package")
+        val visible = (0 until nodes.length).map { (nodes.item(it) as Element).getAttribute("android:name") }.toSet()
+        val launchable = bundled.tiles.flatMap { bundled.candidatesFor(it) }
+        assertEquals(emptyList<String>(), launchable.filterNot { it in visible })
     }
 }

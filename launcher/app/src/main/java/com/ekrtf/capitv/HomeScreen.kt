@@ -1,10 +1,15 @@
 package com.ekrtf.capitv
 
+import android.graphics.BitmapFactory
 import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -36,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -44,10 +53,12 @@ import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.sqrt
 
-private val Background = Color(0xFF0B0C10)
+private val BackgroundTop = Color(0xFF111319)
+private val BackgroundBottom = Color(0xFF060709)
 private val TileIdle = Color(0xFF16181F)
-private val TileFocused = Color(0xFF1F2230)
+private val TileFocused = Color(0xFF1E212B)
 private val TextDim = Color(0xFF8A8F9C)
 
 @Composable
@@ -63,17 +74,10 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Background)
+                .background(Brush.verticalGradient(listOf(BackgroundTop, BackgroundBottom)))
                 .padding(horizontal = 64.dp, vertical = 40.dp),
         ) {
             Clock(modifier = Modifier.align(Alignment.TopEnd))
-            Text(
-                text = stringResource(R.string.app_name),
-                color = TextDim,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.align(Alignment.TopStart),
-            )
 
             val firstTile = remember { FocusRequester() }
             Row(
@@ -85,32 +89,21 @@ fun HomeScreen(
                 config.tiles.forEachIndexed { index, tile ->
                     // Re-evaluated on every resume (resumeTick) so newly installed apps light up.
                     val installed = remember(resumeTick, tile.id) { resolver.resolve(tile) != null }
-                    // Tiles share the row: a TV screen is only 960dp wide, so four full-size
-                    // tiles plus gaps (1076dp) would push the last one off screen.
-                    val share = Modifier.weight(1f, fill = false)
                     AppTile(
                         tile = tile,
                         number = index + 1,
                         installed = installed,
-                        modifier = if (index == 0) share.focusRequester(firstTile) else share,
+                        focusRequester = if (index == 0) firstTile else null,
+                        // Tiles share the row: a TV screen is only 960dp wide, so four full-size
+                        // tiles plus gaps (1076dp) would push the last one off screen.
+                        modifier = Modifier.weight(1f, fill = false),
                         onClick = { onLaunch(tile) },
                     )
                 }
             }
             LaunchedEffect(Unit) { runCatching { firstTile.requestFocus() } }
 
-            Row(
-                modifier = Modifier.align(Alignment.BottomStart),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SettingsChip(onClick = onSettings)
-                Spacer(Modifier.width(24.dp))
-                Text(
-                    text = stringResource(R.string.shortcut_hint, config.tiles.size),
-                    color = TextDim,
-                    fontSize = 14.sp,
-                )
-            }
+            SettingsChip(onClick = onSettings, modifier = Modifier.align(Alignment.BottomStart))
 
             messages.current?.let { msg ->
                 LaunchedEffect(msg.id) {
@@ -131,76 +124,103 @@ fun HomeScreen(
     }
 }
 
+/** A logo card with its remote key number underneath, lit when the card has focus. */
 @Composable
 private fun AppTile(
     tile: Tile,
     number: Int,
     installed: Boolean,
+    focusRequester: FocusRequester?,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
     val accent = parseAccent(tile.accent)
-    val shape = RoundedCornerShape(20.dp)
-    Surface(
-        onClick = onClick,
-        modifier = modifier.widthIn(max = 248.dp).aspectRatio(248f / 156f),
-        shape = ClickableSurfaceDefaults.shape(shape = shape),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = TileIdle,
-            focusedContainerColor = TileFocused,
-            pressedContainerColor = TileFocused,
-        ),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(border = BorderStroke(3.dp, accent), shape = shape),
-        ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.08f),
+    val shape = RoundedCornerShape(18.dp)
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    Column(
+        modifier = modifier.widthIn(max = 248.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(Modifier.fillMaxSize()) {
-            Box(
-                Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .background(accent),
-            )
-            Text(
-                text = "$number",
-                color = TextDim,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 18.dp, end = 18.dp),
-            )
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(20.dp),
-            ) {
-                Text(
-                    text = tile.label,
-                    color = if (installed) Color.White else TextDim,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (!installed) {
-                    Text(
-                        text = stringResource(R.string.tile_not_installed),
-                        color = TextDim,
-                        fontSize = 14.sp,
-                    )
-                }
-            }
+        Surface(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 10f)
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
+            shape = ClickableSurfaceDefaults.shape(shape = shape),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = TileIdle,
+                focusedContainerColor = TileFocused,
+                pressedContainerColor = TileFocused,
+            ),
+            border = ClickableSurfaceDefaults.border(
+                focusedBorder = Border(border = BorderStroke(2.dp, accent), shape = shape),
+            ),
+            glow = ClickableSurfaceDefaults.glow(
+                focusedGlow = Glow(elevationColor = accent.copy(alpha = 0.5f), elevation = 18.dp),
+            ),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
+            interactionSource = interaction,
+        ) {
+            TileFace(tile = tile, dimmed = !installed)
         }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = if (installed) "$number" else "$number · ${stringResource(R.string.tile_not_installed)}",
+            color = if (focused) Color.White else TextDim,
+            fontSize = 15.sp,
+            maxLines = 1,
+        )
     }
 }
 
 @Composable
-private fun SettingsChip(onClick: () -> Unit) {
+private fun TileFace(tile: Tile, dimmed: Boolean) {
+    val logo = rememberLogo(tile.logo)
+    val alpha = if (dimmed) 0.3f else 1f
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (logo != null) {
+            // Every logo gets the same area, so a square mark and a long wordmark look equally big.
+            val aspect = logo.width.toFloat() / logo.height
+            val width = minOf(maxHeight * 0.56f * sqrt(aspect), maxWidth * 0.74f)
+            Image(
+                bitmap = logo,
+                contentDescription = tile.label,
+                alpha = alpha,
+                modifier = Modifier
+                    .width(width)
+                    .aspectRatio(aspect),
+            )
+        } else {
+            Text(
+                text = tile.label,
+                color = Color.White.copy(alpha = alpha),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+    }
+}
+
+/** Decodes a bundled logo once; null (so the label is shown) if it is missing or unreadable. */
+@Composable
+private fun rememberLogo(path: String?): ImageBitmap? {
+    val assets = LocalContext.current.assets
+    return remember(path) {
+        path?.let { runCatching { assets.open(it).use(BitmapFactory::decodeStream)?.asImageBitmap() }.getOrNull() }
+    }
+}
+
+@Composable
+private fun SettingsChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(50)
     Surface(
         onClick = onClick,
+        modifier = modifier,
         shape = ClickableSurfaceDefaults.shape(shape = shape),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,

@@ -7,5 +7,4 @@
     <string name="not_installed">%1$s is not installed. Opening the Play Store.</string>
     <string name="cannot_open">Could not open %1$s.</string>
     <string name="tile_not_installed">Not installed</string>
-    <string name="shortcut_hint">Shortcuts: keys 1 to %1$d, colour keys, the remote\'s app buttons. 0: settings.</string>
 </resources>

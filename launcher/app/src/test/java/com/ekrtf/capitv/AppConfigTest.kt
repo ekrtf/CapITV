@@ -148,6 +148,21 @@ class AppConfigTest {
     }
 
     @Test
+    fun everyBundledTileHasALogoThatExists() {
+        bundled.tiles.forEach { tile ->
+            val logo = tile.logo ?: error("Tile '${tile.id}' has no logo")
+            assertTrue("missing asset $logo", File("src/main/assets/$logo").isFile)
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun blankLogoIsRejected() {
+        AppConfig.parse(
+            config(extraTile = """, {"id": "x", "label": "X", "logo": " ", "accent": "#000000", "packages": ["x"]}"""),
+        )
+    }
+
+    @Test
     fun everyBundledPackageIsInTheManifestQueries() {
         // Android 11+ hides packages missing from <queries>: their tile would always say "Not installed".
         val manifest = DocumentBuilderFactory.newInstance().newDocumentBuilder()

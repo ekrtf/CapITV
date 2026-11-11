@@ -6,5 +6,4 @@
     <string name="not_installed">%1$s n\'est pas installé. Ouverture du Play Store.</string>
     <string name="cannot_open">Impossible d\'ouvrir %1$s.</string>
     <string name="tile_not_installed">Non installé</string>
-    <string name="shortcut_hint">Raccourcis : touches 1 à %1$d, touches de couleur, boutons d\'applis de la télécommande. 0 : paramètres.</string>
 </resources>

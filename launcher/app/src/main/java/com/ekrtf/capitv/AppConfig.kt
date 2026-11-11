@@ -14,8 +14,11 @@ enum class YoutubeClient {
 @Serializable
 data class Tile(
     val id: String,
+    /** Shown when there is no logo, and read out by accessibility services. */
     val label: String,
-    /** #RRGGBB accent used for the tile's focus ring and stripe. */
+    /** Asset path of a light-on-dark logo (e.g. logos/netflix.webp). Without one, the label is shown. */
+    val logo: String? = null,
+    /** #RRGGBB accent used for the tile's focus ring and glow. */
     val accent: String,
     /** Packages to try, in order. The first installed one is launched. */
     val packages: List<String>,
@@ -57,6 +60,7 @@ data class AppConfig(
             require(tile.id.isNotBlank() && tile.label.isNotBlank()) { "Tile id and label must not be blank" }
             require(tile.packages.isNotEmpty()) { "Tile '${tile.id}' has no packages" }
             require(ACCENT.matches(tile.accent)) { "Tile '${tile.id}' accent must be #RRGGBB" }
+            require(tile.logo == null || tile.logo.isNotBlank()) { "Tile '${tile.id}' logo must not be blank" }
         }
         // Throws on unknown names and on keys bound twice.
         keyBindings()
